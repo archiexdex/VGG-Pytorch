@@ -2,7 +2,8 @@ import os, shutil
 import torch
 import torchvision
 import torchvision.transforms as transforms
-import torch.argsim as argsim
+import torch.optim as optim
+import torch.nn as nn
 import argparse
 import random
 from datetime import datetime
@@ -21,8 +22,8 @@ def same_seeds(seed):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--epoch", type=int, default=1)
-parser.add_argument("--batch_size", type=int, default=64)
+parser.add_argument("--epoch", "-e", type=int, default=10)
+parser.add_argument("--batch_size", "-b", type=int, default=64)
 parser.add_argument("--ngpu", type=int, default=1)
 parser.add_argument('--lms', type=int, default=0, help='0 for not usig large model support, 1 for using')
 parser.add_argument('--seed', type=int, default=0, help='it is just seed')
@@ -30,6 +31,8 @@ parser.add_argument('--nst', type=int, default=0, help='it is for nv-nsight-cu-c
 parser.add_argument('--cdn', type=int, default=1, help='it is for cudnn enable')
 
 args = parser.parse_args()
+
+print(args)
 
 if args.ngpu == 1:
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -39,6 +42,7 @@ if args.lms == 1:
     if args.cdn == 0:
         torch.backends.cudnn.enabled = False 
 
+# Data
 transform = transforms.Compose([
     transforms.ToTensor(),
     transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -68,7 +72,7 @@ if args.ngpu > 0:
 
 
 criterion = nn.CrossEntropyLoss()
-optimizer = argsim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 
 def train():
@@ -77,10 +81,12 @@ def train():
         nvidia_smi.nvmlInit()
     for i, data in enumerate(trainloader):
         # get the inputs; data is a list of [inputs, labels]
-        inputs, labels = data.cuda() 
+        inputs, labels = data
+        inputs = inputs.cuda()
+        labels = labels.cuda()
 
         # zero the parameter gradients
-        argsimizer.zero_grad()
+        optimizer.zero_grad()
 
         # forward + backward + argsimize
         outputs = net(inputs)
@@ -107,7 +113,10 @@ def test():
     correct = 0
     with torch.no_grad():
         for data in testloader:
-            images, labels = data.cuda() 
+            images, labels = data
+            images = images.cuda()
+            labels = labels.cuda()
+
             outputs = net(images)
             _, predicted = torch.max(outputs.data, 1)
             total += labels.size(0)
@@ -118,7 +127,10 @@ def test():
     print('Accuracy of the network on the 10000 test images: %d %%' % (
         100 * correct / total))
 
-for _ in range(args.epoch):  # loop over the dataset multiple times
+print("Start training")
+st_time = datetime.now()
+for e in range(args.epoch):  # loop over the dataset multiple times
+    print(f"Epoch: {e}")
     train()
     test()
 
