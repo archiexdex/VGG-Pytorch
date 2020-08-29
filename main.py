@@ -133,5 +133,7 @@ for e in range(args.epoch):  # loop over the dataset multiple times
     print(f"Epoch: {e}")
     train()
     test()
+    if args.nst == 1:
+        break
 
 print(f"Cost time: {(datetime.now()-st_time).seconds}")
