@@ -209,6 +209,13 @@ def main():
 
             mean_loss += loss.item()
             if args.nst == 1:
+                nvidia_smi.nvmlInit()
+                handle = nvidia_smi.nvmlDeviceGetHandleByIndex(0)
+                info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+                print(f"nvidia-smi id 0: {info.used/1024//1024}")
+                handle = nvidia_smi.nvmlDeviceGetHandleByIndex(1)
+                info = nvidia_smi.nvmlDeviceGetMemoryInfo(handle)
+                print(f"nvidia-smi id 1: {info.used/1024//1024}")
                 break
         mean_loss /= len(trainloader)
         return mean_loss
